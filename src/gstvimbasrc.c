@@ -672,10 +672,6 @@ void gst_vimbasrc_get_property(GObject *object, guint property_id, GValue *value
 
     VmbError_t result;
 
-    const char *vmbfeature_value_char;
-    double vmbfeature_value_double;
-    VmbInt64_t vmbfeature_value_int64;
-
     GST_TRACE_OBJECT(vimbasrc, "get_property");
 
     switch (property_id)
@@ -690,246 +686,58 @@ void gst_vimbasrc_get_property(GObject *object, guint property_id, GValue *value
         // TODO: Workaround for cameras with legacy "ExposureTimeAbs" feature should be replaced with a general legacy
         // feature name handling approach: See similar TODO above
 
-        result = VmbFeatureFloatGet(vimbasrc->camera.handle, "ExposureTime", &vmbfeature_value_double);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"ExposureTime\": %f",
-                             vmbfeature_value_double);
-            vimbasrc->properties.exposuretime = vmbfeature_value_double;
-        }
-        else if (result == VmbErrorNotFound)
+        result = feature_get_double(vimbasrc, "ExposureTime", &vimbasrc->properties.exposuretime);
+        if (result == VmbErrorNotFound)
         {
             GST_WARNING_OBJECT(vimbasrc,
                                "Failed to get \"ExposureTime\". Return code was: %s Attempting \"ExposureTimeAbs\"",
                                ErrorCodeToMessage(result));
-            result = VmbFeatureFloatGet(vimbasrc->camera.handle, "ExposureTimeAbs", &vmbfeature_value_double);
-            if (result == VmbErrorSuccess)
-            {
-                GST_DEBUG_OBJECT(vimbasrc,
-                                 "Camera returned the following value for \"ExposureTimeAbs\": %f",
-                                 vmbfeature_value_double);
-                vimbasrc->properties.exposuretime = vmbfeature_value_double;
-            }
-            else
-            {
-                GST_WARNING_OBJECT(vimbasrc,
-                                   "Failed to read value of \"ExposureTimeAbs\" from camera. Return code was: %s",
-                                   ErrorCodeToMessage(result));
-            }
+            result = feature_get_double(vimbasrc, "ExposureTimeAbs", &vimbasrc->properties.exposuretime);
         }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to read value of \"ExposureTime\" from camera. Return code was: %s",
-                               ErrorCodeToMessage(result));
-        }
-
         g_value_set_double(value, vimbasrc->properties.exposuretime);
         break;
     case PROP_EXPOSUREAUTO:
-        result = VmbFeatureEnumGet(vimbasrc->camera.handle, "ExposureAuto", &vmbfeature_value_char);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"ExposureAuto\": %s",
-                             vmbfeature_value_char);
-            vimbasrc->properties.exposureauto = g_enum_get_value_by_nick(
-                                                    g_type_class_ref(GST_ENUM_EXPOSUREAUTO_MODES),
-                                                    vmbfeature_value_char)
-                                                    ->value;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to read value of \"ExposureAuto\" from camera. Return code was: %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_enum(vimbasrc, "ExposureAuto", GST_ENUM_EXPOSUREAUTO_MODES, &vimbasrc->properties.exposureauto);
         g_value_set_enum(value, vimbasrc->properties.exposureauto);
         break;
     case PROP_BALANCEWHITEAUTO:
-        result = VmbFeatureEnumGet(vimbasrc->camera.handle, "BalanceWhiteAuto", &vmbfeature_value_char);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"BalanceWhiteAuto\": %s",
-                             vmbfeature_value_char);
-            vimbasrc->properties.balancewhiteauto = g_enum_get_value_by_nick(
-                                                        g_type_class_ref(GST_ENUM_BALANCEWHITEAUTO_MODES),
-                                                        vmbfeature_value_char)
-                                                        ->value;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to read value of \"BalanceWhiteAuto\" from camera. Return code was: %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_enum(vimbasrc, "BalanceWhiteAuto", GST_ENUM_BALANCEWHITEAUTO_MODES, &vimbasrc->properties.balancewhiteauto);
         g_value_set_enum(value, vimbasrc->properties.balancewhiteauto);
         break;
     case PROP_GAIN:
-        result = VmbFeatureFloatGet(vimbasrc->camera.handle, "Gain", &vmbfeature_value_double);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"Gain\": %f",
-                             vmbfeature_value_double);
-            vimbasrc->properties.gain = vmbfeature_value_double;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to read value of \"Gain\" from camera. Return code was: %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_double(vimbasrc, "Gain", &vimbasrc->properties.gain);
         g_value_set_double(value, vimbasrc->properties.gain);
         break;
     case PROP_OFFSETX:
-        result = VmbFeatureIntGet(vimbasrc->camera.handle, "OffsetX", &vmbfeature_value_int64);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"OffsetX\": %lld",
-                             vmbfeature_value_int64);
-            vimbasrc->properties.offsetx = (int)vmbfeature_value_int64;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Could not read value for \"OffsetX\". Got return code %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_int(vimbasrc, "OffsetX", &vimbasrc->properties.offsetx);
         g_value_set_int(value, vimbasrc->properties.offsetx);
         break;
     case PROP_OFFSETY:
-        result = VmbFeatureIntGet(vimbasrc->camera.handle, "OffsetY", &vmbfeature_value_int64);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"OffsetY\": %lld",
-                             vmbfeature_value_int64);
-            vimbasrc->properties.offsety = (int)vmbfeature_value_int64;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Could not read value for \"OffsetY\". Got return code %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_int(vimbasrc, "OffsetY", &vimbasrc->properties.offsety);
         g_value_set_int(value, vimbasrc->properties.offsety);
         break;
     case PROP_WIDTH:
-        result = VmbFeatureIntGet(vimbasrc->camera.handle, "Width", &vmbfeature_value_int64);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"Width\": %lld",
-                             vmbfeature_value_int64);
-            vimbasrc->properties.width = (int)vmbfeature_value_int64;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Could not read value for \"Width\". Got return code %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_int(vimbasrc, "Width", &vimbasrc->properties.width);
         g_value_set_int(value, vimbasrc->properties.width);
         break;
     case PROP_HEIGHT:
-        result = VmbFeatureIntGet(vimbasrc->camera.handle, "Height", &vmbfeature_value_int64);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"Height\": %lld",
-                             vmbfeature_value_int64);
-            vimbasrc->properties.height = (int)vmbfeature_value_int64;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Could not read value for \"Height\". Got return code %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_int(vimbasrc, "Height", &vimbasrc->properties.height);
         g_value_set_int(value, vimbasrc->properties.height);
         break;
     case PROP_TRIGGERSELECTOR:
-        result = VmbFeatureEnumGet(vimbasrc->camera.handle, "TriggerSelector", &vmbfeature_value_char);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"TriggerSelector\": %s",
-                             vmbfeature_value_char);
-            vimbasrc->properties.exposureauto = g_enum_get_value_by_nick(
-                                                    g_type_class_ref(GST_ENUM_TRIGGERSELECTOR_VALUES),
-                                                    vmbfeature_value_char)
-                                                    ->value;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to read value of \"TriggerSelector\" from camera. Return code was: %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_enum(vimbasrc, "TriggerSelector", GST_ENUM_TRIGGERSELECTOR_VALUES, &vimbasrc->properties.triggerselector);
         g_value_set_enum(value, vimbasrc->properties.triggerselector);
         break;
     case PROP_TRIGGERMODE:
-        result = VmbFeatureEnumGet(vimbasrc->camera.handle, "TriggerMode", &vmbfeature_value_char);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"TriggerMode\": %s",
-                             vmbfeature_value_char);
-            vimbasrc->properties.exposureauto = g_enum_get_value_by_nick(
-                                                    g_type_class_ref(GST_ENUM_TRIGGERMODE_VALUES),
-                                                    vmbfeature_value_char)
-                                                    ->value;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to read value of \"TriggerMode\" from camera. Return code was: %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_enum(vimbasrc, "TriggerMode", GST_ENUM_TRIGGERMODE_VALUES, &vimbasrc->properties.triggermode);
         g_value_set_enum(value, vimbasrc->properties.triggermode);
         break;
     case PROP_TRIGGERSOURCE:
-        result = VmbFeatureEnumGet(vimbasrc->camera.handle, "TriggerSource", &vmbfeature_value_char);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"TriggerSource\": %s",
-                             vmbfeature_value_char);
-            vimbasrc->properties.exposureauto = g_enum_get_value_by_nick(
-                                                    g_type_class_ref(GST_ENUM_TRIGGERSOURCE_VALUES),
-                                                    vmbfeature_value_char)
-                                                    ->value;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to read value of \"TriggerSource\" from camera. Return code was: %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_enum(vimbasrc, "TriggerSource", GST_ENUM_TRIGGERSOURCE_VALUES, &vimbasrc->properties.triggersource);
         g_value_set_enum(value, vimbasrc->properties.triggersource);
         break;
     case PROP_TRIGGERACTIVATION:
-        result = VmbFeatureEnumGet(vimbasrc->camera.handle, "TriggerActivation", &vmbfeature_value_char);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"TriggerActivation\": %s",
-                             vmbfeature_value_char);
-            vimbasrc->properties.exposureauto = g_enum_get_value_by_nick(
-                                                    g_type_class_ref(GST_ENUM_TRIGGERACTIVATION_VALUES),
-                                                    vmbfeature_value_char)
-                                                    ->value;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to read value of \"TriggerActivation\" from camera. Return code was: %s",
-                               ErrorCodeToMessage(result));
-        }
+        result = feature_get_enum(vimbasrc, "TriggerActivation", GST_ENUM_TRIGGERACTIVATION_VALUES, &vimbasrc->properties.triggeractivation);
         g_value_set_enum(value, vimbasrc->properties.triggeractivation);
         break;
     case PROP_INCOMPLETE_FRAME_HANDLING:
@@ -1403,86 +1211,24 @@ VmbError_t apply_feature_settings(GstVimbaSrc *vimbasrc)
     // ("ExposureTimeAbs", setExposureTimeAbs, getExposureTimeAbs)]. On startup, the feature list of the connected
     // camera obtained from VmbFeaturesList() is used to determine which set/get function to use.
 
-    GST_DEBUG_OBJECT(vimbasrc, "Setting \"ExposureTime\" to %f", vimbasrc->properties.exposuretime);
-    VmbError_t result = VmbFeatureFloatSet(vimbasrc->camera.handle, "ExposureTime", vimbasrc->properties.exposuretime);
-    if (result == VmbErrorSuccess)
-    {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-    }
-    else if (result == VmbErrorNotFound)
+    VmbError_t result = feature_set_int(vimbasrc, "ExposureTime", vimbasrc->properties.exposuretime);
+    if (result == VmbErrorNotFound)
     {
         GST_WARNING_OBJECT(vimbasrc,
                            "Failed to set \"ExposureTime\" to %f. Return code was: %s Attempting \"ExposureTimeAbs\"",
                            vimbasrc->properties.exposuretime,
                            ErrorCodeToMessage(result));
-        result = VmbFeatureFloatSet(vimbasrc->camera.handle, "ExposureTimeAbs", vimbasrc->properties.exposuretime);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to set \"ExposureTimeAbs\" to %f. Return code was: %s",
-                               vimbasrc->properties.exposuretime,
-                               ErrorCodeToMessage(result));
-        }
-    }
-    else
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"ExposureTime\" to %f. Return code was: %s",
-                           vimbasrc->properties.exposuretime,
-                           ErrorCodeToMessage(result));
+        result = feature_set_int(vimbasrc, "ExposureTimeAbs", vimbasrc->properties.exposuretime);
     }
 
     // Exposure Auto
-    enum_entry = g_enum_get_value(g_type_class_ref(GST_ENUM_EXPOSUREAUTO_MODES), vimbasrc->properties.exposureauto);
-    GST_DEBUG_OBJECT(vimbasrc, "Setting \"ExposureAuto\" to %s", enum_entry->value_nick);
-    result = VmbFeatureEnumSet(vimbasrc->camera.handle, "ExposureAuto", enum_entry->value_nick);
-    if (result == VmbErrorSuccess)
-    {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-    }
-    else
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"ExposureAuto\" to %s. Return code was: %s",
-                           enum_entry->value_nick,
-                           ErrorCodeToMessage(result));
-    }
+    result = feature_set_enum(vimbasrc, "ExposureAuto", GST_ENUM_EXPOSUREAUTO_MODES, vimbasrc->properties.exposureauto);
 
     // Auto whitebalance
-    enum_entry = g_enum_get_value(g_type_class_ref(GST_ENUM_BALANCEWHITEAUTO_MODES),
-                                  vimbasrc->properties.balancewhiteauto);
-    GST_DEBUG_OBJECT(vimbasrc, "Setting \"BalanceWhiteAuto\" to %s", enum_entry->value_nick);
-    result = VmbFeatureEnumSet(vimbasrc->camera.handle, "BalanceWhiteAuto", enum_entry->value_nick);
-    if (result == VmbErrorSuccess)
-    {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-    }
-    else
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"BalanceWhiteAuto\" to %s. Return code was: %s",
-                           enum_entry->value_nick,
-                           ErrorCodeToMessage(result));
-    }
+    result = feature_set_enum(vimbasrc, "BalanceWhiteAuto", GST_ENUM_BALANCEWHITEAUTO_MODES, vimbasrc->properties.balancewhiteauto);
 
     // gain
-    GST_DEBUG_OBJECT(vimbasrc, "Setting \"Gain\" to %f", vimbasrc->properties.gain);
-    result = VmbFeatureFloatSet(vimbasrc->camera.handle, "Gain", vimbasrc->properties.gain);
-    if (result == VmbErrorSuccess)
-    {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-    }
-    else
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"Gain\" to %f. Return code was: %s",
-                           vimbasrc->properties.gain,
-                           ErrorCodeToMessage(result));
-    }
+    result = feature_set_double(vimbasrc, "Gain", vimbasrc->properties.gain);
 
     result = set_roi(vimbasrc);
 
@@ -1514,25 +1260,13 @@ VmbError_t set_roi(GstVimbaSrc *vimbasrc)
 
     // Reset OffsetX and OffsetY to 0 so that full sensor width is usable for width/height
     VmbError_t result;
+
     GST_DEBUG_OBJECT(vimbasrc, "Temporarily resetting \"OffsetX\" and \"OffsetY\" to 0");
-    result = VmbFeatureIntSet(vimbasrc->camera.handle, "OffsetX", 0);
-    if (result != VmbErrorSuccess)
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"OffsetX\" to 0. Return code was: %s",
-                           ErrorCodeToMessage(result));
-    }
-    result = VmbFeatureIntSet(vimbasrc->camera.handle, "OffsetY", 0);
-    if (result != VmbErrorSuccess)
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"OffsetY\" to 0. Return code was: %s",
-                           ErrorCodeToMessage(result));
-    }
+    result = feature_set_int(vimbasrc, "OffsetX", 0);
+    result = feature_set_int(vimbasrc, "OffsetY", 0);
 
     VmbInt64_t vmb_width;
     result = VmbFeatureIntRangeQuery(vimbasrc->camera.handle, "Width", NULL, &vmb_width);
-
     // Set Width to full sensor if no explicit width was set
     if (vimbasrc->properties.width == INT_MAX)
     {
@@ -1542,19 +1276,7 @@ VmbError_t set_roi(GstVimbaSrc *vimbasrc)
                          ErrorCodeToMessage(result));
         g_object_set(vimbasrc, "width", (int)vmb_width, NULL);
     }
-    GST_DEBUG_OBJECT(vimbasrc, "Setting \"Width\" to %d", vimbasrc->properties.width);
-    result = VmbFeatureIntSet(vimbasrc->camera.handle, "Width", vimbasrc->properties.width);
-    if (result == VmbErrorSuccess)
-    {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-    }
-    else
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"Width\" to value \"%d\". Return code was: %s",
-                           vimbasrc->properties.width,
-                           ErrorCodeToMessage(result));
-    }
+    result = feature_set_int(vimbasrc, "Width", vimbasrc->properties.width);
 
     VmbInt64_t vmb_height;
     result = VmbFeatureIntRangeQuery(vimbasrc->camera.handle, "Height", NULL, &vmb_height);
@@ -1567,56 +1289,23 @@ VmbError_t set_roi(GstVimbaSrc *vimbasrc)
                          ErrorCodeToMessage(result));
         g_object_set(vimbasrc, "height", (int)vmb_height, NULL);
     }
-    GST_DEBUG_OBJECT(vimbasrc, "Setting \"Height\" to %d", vimbasrc->properties.height);
-    result = VmbFeatureIntSet(vimbasrc->camera.handle, "Height", vimbasrc->properties.height);
-    if (result == VmbErrorSuccess)
-    {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-    }
-    else
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"Height\" to value \"%d\". Return code was: %s",
-                           vimbasrc->properties.height,
-                           ErrorCodeToMessage(result));
-    }
+    result = feature_set_int(vimbasrc, "Height", vimbasrc->properties.height);
+
     // offsetx
     if (vimbasrc->properties.offsetx == INT_MAX) {
         VmbInt64_t vmb_offsetx = (vmb_width - vimbasrc->properties.width) >> 1;
-        g_object_set(vimbasrc, "offsetx", (int) vmb_offsetx, NULL);
+        g_object_set(vimbasrc, "offsetx", (int)vmb_offsetx, NULL);
     }
-    GST_DEBUG_OBJECT(vimbasrc, "Setting \"OffsetX\" to %d", vimbasrc->properties.offsetx);
-    result = VmbFeatureIntSet(vimbasrc->camera.handle, "OffsetX", vimbasrc->properties.offsetx);
-    if (result == VmbErrorSuccess)
-    {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-    }
-    else
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"OffsetX\" to value \"%d\". Return code was: %s",
-                           vimbasrc->properties.offsetx,
-                           ErrorCodeToMessage(result));
-    }
+
+    result = feature_set_int(vimbasrc, "OffsetX", vimbasrc->properties.offsetx);
 
     // offsety
     if (vimbasrc->properties.offsety == INT_MAX) {
         VmbInt64_t vmb_offsety = (vmb_height - vimbasrc->properties.height) >> 1;
         g_object_set(vimbasrc, "offsety", (int)vmb_offsety, NULL);
     }
-    GST_DEBUG_OBJECT(vimbasrc, "Setting \"OffsetY\" to %d", vimbasrc->properties.offsety);
-    result = VmbFeatureIntSet(vimbasrc->camera.handle, "OffsetY", vimbasrc->properties.offsety);
-    if (result == VmbErrorSuccess)
-    {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-    }
-    else
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"OffsetY\" to value \"%d\". Return code was: %s",
-                           vimbasrc->properties.offsety,
-                           ErrorCodeToMessage(result));
-    }
+    result = feature_set_int(vimbasrc, "OffsetY", vimbasrc->properties.offsety);
+
     return result;
 }
 
@@ -1645,116 +1334,43 @@ VmbError_t apply_trigger_settings(GstVimbaSrc *vimbasrc)
     // enabled after the function is done?
 
     // TriggerSelector
-    enum_entry = g_enum_get_value(g_type_class_ref(GST_ENUM_TRIGGERSELECTOR_VALUES),
-                                  vimbasrc->properties.triggerselector);
-    if (enum_entry->value == GST_VIMBASRC_TRIGGERSELECTOR_UNCHANGED)
+    if (vimbasrc->properties.triggerselector == GST_VIMBASRC_TRIGGERSELECTOR_UNCHANGED)
     {
-        GST_DEBUG_OBJECT(vimbasrc,
-                         "\"TriggerSelector\" is set to %s. Not changing camera value", enum_entry->value_nick);
+        GST_DEBUG_OBJECT(vimbasrc, "\"TriggerSelector\" is set to UNCHANGED. Not changing camera value");
     }
     else
     {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting \"TriggerSelector\" to %s", enum_entry->value_nick);
-        result = VmbFeatureEnumSet(vimbasrc->camera.handle, "TriggerSelector", enum_entry->value_nick);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-        }
-        else
-        {
-            GST_ERROR_OBJECT(vimbasrc,
-                             "Failed to set \"TriggerSelector\" to %s. Return code was: %s",
-                             enum_entry->value_nick,
-                             ErrorCodeToMessage(result));
-            if (result == VmbErrorInvalidValue)
-            {
-                log_available_enum_entries(vimbasrc, "TriggerSelector");
-            }
-        }
+        result = feature_set_enum(vimbasrc, "TriggerSelector", GST_ENUM_TRIGGERSELECTOR_VALUES, vimbasrc->properties.triggerselector);
     }
 
     // TriggerActivation
-    enum_entry = g_enum_get_value(g_type_class_ref(GST_ENUM_TRIGGERACTIVATION_VALUES),
-                                  vimbasrc->properties.triggeractivation);
-    if (enum_entry->value == GST_VIMBASRC_TRIGGERACTIVATION_UNCHANGED)
+    if (vimbasrc->properties.triggeractivation == GST_VIMBASRC_TRIGGERACTIVATION_UNCHANGED)
     {
-        GST_DEBUG_OBJECT(vimbasrc,
-                         "\"TriggerActivation\" is set to %s. Not changing camera value", enum_entry->value_nick);
+        GST_DEBUG_OBJECT(vimbasrc, "\"TriggerActivation\" is set to UNCHANGED. Not changing camera value");
     }
     else
     {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting \"TriggerActivation\" to %s", enum_entry->value_nick);
-        result = VmbFeatureEnumSet(vimbasrc->camera.handle, "TriggerActivation", enum_entry->value_nick);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-        }
-        else
-        {
-            GST_ERROR_OBJECT(vimbasrc,
-                             "Failed to set \"TriggerActivation\" to %s. Return code was: %s",
-                             enum_entry->value_nick,
-                             ErrorCodeToMessage(result));
-            if (result == VmbErrorInvalidValue)
-            {
-                log_available_enum_entries(vimbasrc, "TriggerActivation");
-            }
-        }
+        result = feature_set_enum(vimbasrc, "TriggerActivation", GST_ENUM_TRIGGERACTIVATION_VALUES, vimbasrc->properties.triggeractivation);
     }
 
     // TriggerSource
-    enum_entry = g_enum_get_value(g_type_class_ref(GST_ENUM_TRIGGERSOURCE_VALUES),
-                                  vimbasrc->properties.triggersource);
-    if (enum_entry->value == GST_VIMBASRC_TRIGGERSOURCE_UNCHANGED)
+    if (vimbasrc->properties.triggersource == GST_VIMBASRC_TRIGGERSOURCE_UNCHANGED)
     {
-
-        GST_DEBUG_OBJECT(vimbasrc,
-                         "\"TriggerSource\" is set to %s. Not changing camera value", enum_entry->value_nick);
+        GST_DEBUG_OBJECT(vimbasrc, "\"TriggerSource\" is set to UNCHANGED. Not changing camera value");
     }
     else
     {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting \"TriggerSource\" to %s", enum_entry->value_nick);
-        result = VmbFeatureEnumSet(vimbasrc->camera.handle, "TriggerSource", enum_entry->value_nick);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-        }
-        else
-        {
-            GST_ERROR_OBJECT(vimbasrc,
-                             "Failed to set \"TriggerSource\" to %s. Return code was: %s",
-                             enum_entry->value_nick,
-                             ErrorCodeToMessage(result));
-            if (result == VmbErrorInvalidValue)
-            {
-                log_available_enum_entries(vimbasrc, "TriggerSource");
-            }
-        }
+        result = feature_set_enum(vimbasrc, "TriggerSource", GST_ENUM_TRIGGERSOURCE_VALUES, vimbasrc->properties.triggersource);
     }
 
     // TriggerMode
-    enum_entry = g_enum_get_value(g_type_class_ref(GST_ENUM_TRIGGERMODE_VALUES),
-                                  vimbasrc->properties.triggermode);
-    if (enum_entry->value == GST_VIMBASRC_TRIGGERMODE_UNCHANGED)
+    if (vimbasrc->properties.triggermode == GST_VIMBASRC_TRIGGERMODE_UNCHANGED)
     {
-        GST_DEBUG_OBJECT(vimbasrc,
-                         "\"TriggerMode\" is set to %s. Not changing camera value", enum_entry->value_nick);
+        GST_DEBUG_OBJECT(vimbasrc, "\"TriggerMode\" is set to UNCHANGED. Not changing camera value");
     }
     else
     {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting \"TriggerMode\" to %s", enum_entry->value_nick);
-        result = VmbFeatureEnumSet(vimbasrc->camera.handle, "TriggerMode", enum_entry->value_nick);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-        }
-        else
-        {
-            GST_ERROR_OBJECT(vimbasrc,
-                             "Failed to set \"TriggerMode\" to %s. Return code was: %s",
-                             enum_entry->value_nick,
-                             ErrorCodeToMessage(result));
-        }
+        result = feature_set_enum(vimbasrc, "TriggerMode", GST_ENUM_TRIGGERMODE_VALUES, vimbasrc->properties.triggermode);
     }
 
     return result;
@@ -1998,4 +1614,123 @@ void log_available_enum_entries(GstVimbaSrc *vimbasrc, const char *feat_name)
     }
 
     free((void *)trigger_source_values);
+}
+
+VmbError_t feature_get_int(GstVimbaSrc *vimbasrc, const char *feature, int *target) {
+    VmbInt64_t vmbfeature_value_int64;
+    VmbError_t result = VmbFeatureIntGet(vimbasrc->camera.handle, feature, &vmbfeature_value_int64);
+    if (result == VmbErrorSuccess)
+    {
+        GST_DEBUG_OBJECT(vimbasrc,
+                         "Camera returned the following value for \"%s\": %lld",
+                         feature,
+                         vmbfeature_value_int64);
+        *target = (int)vmbfeature_value_int64;
+    }
+    else
+    {
+        GST_WARNING_OBJECT(vimbasrc,
+                           "Could not read value for \"%s\". Got return code %s",
+                           feature,
+                           ErrorCodeToMessage(result));
+    }
+    return result;
+}
+
+VmbError_t feature_get_double(GstVimbaSrc *vimbasrc, const char *feature, double *target) {
+    double vmbfeature_value_double;
+    VmbError_t result = VmbFeatureFloatGet(vimbasrc->camera.handle, feature, &vmbfeature_value_double);
+    if (result == VmbErrorSuccess)
+    {
+        GST_DEBUG_OBJECT(vimbasrc,
+                         "Camera returned the following value for \"%s\": %f",
+                         feature,
+                         vmbfeature_value_double);
+        *target = vmbfeature_value_double;
+    }
+    else
+    {
+        GST_WARNING_OBJECT(vimbasrc,
+                           "Could not read value for \"%s\". Got return code %s",
+                           feature,
+                           ErrorCodeToMessage(result));
+    }
+    return result;
+}
+
+VmbError_t feature_get_enum(GstVimbaSrc *vimbasrc, const char *feature, GType type, int *target) {
+    const char *vmbfeature_value_char;
+    VmbError_t result = VmbFeatureEnumGet(vimbasrc->camera.handle, feature, &vmbfeature_value_char);
+    if (result == VmbErrorSuccess)
+    {
+        GST_DEBUG_OBJECT(vimbasrc,
+                         "Camera returned the following value for \"%s\": %s",
+                         feature,
+                         vmbfeature_value_char);
+        *target = g_enum_get_value_by_nick(g_type_class_ref(type), vmbfeature_value_char)->value;
+    }
+    else
+    {
+        GST_WARNING_OBJECT(vimbasrc,
+                           "Could not read value for \"%s\". Got return code %s",
+                           feature,
+                           ErrorCodeToMessage(result));
+    }
+    return result;
+}
+
+VmbError_t feature_set_int(GstVimbaSrc *vimbasrc, const char *feature, int value) {
+    GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" to %d", feature, value);
+    result = VmbFeatureIntSet(vimbasrc->camera.handle, feature, value);
+    if (result == VmbErrorSuccess)
+    {
+        GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" was changed successfully", feature);
+    }
+    else
+    {
+        GST_WARNING_OBJECT(vimbasrc,
+                           "Failed to set \"%s\" to %d. Return code was: %s",
+                           feature,
+                           value,
+                           ErrorCodeToMessage(result));
+    }
+    return result;
+}
+
+VmbError_t feature_set_double(GstVimbaSrc *vimbasrc, const char *feature, double value) {
+    GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" to %f", feature, value);
+    result = VmbFeatureFloatSet(vimbasrc->camera.handle, feature, value);
+    if (result == VmbErrorSuccess)
+    {
+        GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" was changed successfully", feature);
+    }
+    else
+    {
+        GST_WARNING_OBJECT(vimbasrc,
+                           "Failed to set \"%s\" to %f. Return code was: %s",
+                           feature,
+                           value,
+                           ErrorCodeToMessage(result));
+    }
+    return result;
+}
+
+VmbError_t feature_set_enum(GstVimbaSrc *vimbasrc, const char *feature, GType type, int value) {
+    GEnumValue *enum_entry = g_enum_get_value(g_type_class_ref(type), value);
+    GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" to %s", feature, enum_entry->value_nick);
+    result = VmbFeatureEnumSet(vimbasrc->camera.handle, feature, enum_entry->value_nick);
+    if (result == VmbErrorSuccess) {
+        GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" was changed successfully", feature);
+    } else {
+        GST_WARNING_OBJECT(vimbasrc,
+                           "Failed to set \"%s\" to %s. Return code was: %s",
+                           feature,
+                           enum_entry->value_nick,
+                           ErrorCodeToMessage(result));
+        if (result == VmbErrorInvalidValue)
+        {
+            log_available_enum_entries(vimbasrc, feature);
+        }
+    }
+    return result;
 }

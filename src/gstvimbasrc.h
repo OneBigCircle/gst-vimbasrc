@@ -202,4 +202,12 @@ void VMB_CALL vimba_frame_callback(const VmbHandle_t cameraHandle, VmbFrame_t *p
 void map_supported_pixel_formats(GstVimbaSrc *vimbasrc);
 void log_available_enum_entries(GstVimbaSrc *vimbasrc, const char *feat_name);
 
+VmbError_t feature_get_int(GstVimbaSrc *vimbasrc, const char *feature, int *target);
+VmbError_t feature_get_double(GstVimbaSrc *vimbasrc, const char *feature, double *target);
+VmbError_t feature_get_enum(GstVimbaSrc *vimbasrc, const char *feature, GType type, int *target);
+
+VmbError_t feature_set_int(GstVimbaSrc *vimbasrc, const char *feature, int value);
+VmbError_t feature_set_double(GstVimbaSrc *vimbasrc, const char *feature, double value);
+VmbError_t feature_set_enum(GstVimbaSrc *vimbasrc, const char *feature, GType type, int value);
+
 #endif
