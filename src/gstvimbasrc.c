@@ -731,39 +731,11 @@ void gst_vimbasrc_get_property(GObject *object, guint property_id, GValue *value
         g_value_set_enum(value, vimbasrc->properties.exposureauto);
         break;
     case PROP_EXPOSUREAUTOMAX:
-        result = VmbFeatureIntGet(vimbasrc->camera.handle, "ExposureAutoMax", &vmbfeature_value_int64);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"ExposureAutoMax\": %lld",
-                             vmbfeature_value_int64);
-            vimbasrc->properties.exposureautomax = (int)vmbfeature_value_int64;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to read value of \"ExposureAutoMax\" from camera. Return code was: %s",
-                               ErrorCodeToMessage(result));
-        }
-
+        result = feature_get_int(vimbasrc, "ExposureAutoMax", &vimbasrc->properties.exposureautomax);
         g_value_set_int(value, vimbasrc->properties.exposureautomax);
         break;
     case PROP_EXPOSUREAUTOMIN:
-        result = VmbFeatureIntGet(vimbasrc->camera.handle, "ExposureAutoMin", &vmbfeature_value_int64);
-        if (result == VmbErrorSuccess)
-        {
-            GST_DEBUG_OBJECT(vimbasrc,
-                             "Camera returned the following value for \"ExposureAutoMin\": %lld",
-                             vmbfeature_value_int64);
-            vimbasrc->properties.exposureautomin = (int)vmbfeature_value_int64;
-        }
-        else
-        {
-            GST_WARNING_OBJECT(vimbasrc,
-                               "Failed to read value of \"ExposureAutoMin\" from camera. Return code was: %s",
-                               ErrorCodeToMessage(result));
-        }
-
+        result = feature_get_int(vimbasrc, "ExposureAutoMin", &vimbasrc->properties.exposureautomin);
         g_value_set_int(value, vimbasrc->properties.exposureautomin);
         break;
     case PROP_BALANCEWHITEAUTO:
@@ -1289,33 +1261,8 @@ VmbError_t apply_feature_settings(GstVimbaSrc *vimbasrc)
 
     // Exposure Auto
     result = feature_set_enum(vimbasrc, "ExposureAuto", GST_ENUM_EXPOSUREAUTO_MODES, vimbasrc->properties.exposureauto);
-
-    GST_DEBUG_OBJECT(vimbasrc, "Setting \"ExposureAutoMax\" to %d", vimbasrc->properties.exposureautomax);
-    result = VmbFeatureIntSet(vimbasrc->camera.handle, "ExposureAutoMax", vimbasrc->properties.exposureautomax);
-    if (result == VmbErrorSuccess)
-    {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-    }
-    else
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"ExposureAutoMax\" to value \"%d\". Return code was: %s",
-                           vimbasrc->properties.exposureautomax,
-                           ErrorCodeToMessage(result));
-    }
-    GST_DEBUG_OBJECT(vimbasrc, "Setting \"ExposureAutoMin\" to %d", vimbasrc->properties.exposureautomin);
-    result = VmbFeatureIntSet(vimbasrc->camera.handle, "ExposureAutoMin", vimbasrc->properties.exposureautomin);
-    if (result == VmbErrorSuccess)
-    {
-        GST_DEBUG_OBJECT(vimbasrc, "Setting was changed successfully");
-    }
-    else
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"ExposureAutoMin\" to value \"%d\". Return code was: %s",
-                           vimbasrc->properties.exposureautomin,
-                           ErrorCodeToMessage(result));
-    }
+    result = feature_set_int(vimbasrc, "ExposureAutoMax", vimbasrc->properties.exposureautomax);
+    result = feature_set_int(vimbasrc, "ExposureAutoMin", vimbasrc->properties.exposureautomin);
 
     // Auto whitebalance
     result = feature_set_enum(vimbasrc, "BalanceWhiteAuto", GST_ENUM_BALANCEWHITEAUTO_MODES, vimbasrc->properties.balancewhiteauto);
