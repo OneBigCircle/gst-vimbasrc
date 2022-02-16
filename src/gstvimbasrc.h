@@ -137,6 +137,13 @@ typedef enum
     GST_VIMBASRC_INCOMPLETE_FRAME_HANDLING_SUBMIT
 } GstVimbasrcIncompleteFrameHandlingValue;
 
+// Possible values for BinningMode feature
+typedef enum
+{
+    GST_VIMBASRC_BINNINGMODE_SUM,
+    GST_VIMBASRC_BINNINGMODE_AVERAGE
+} GstVimbasrcBinningModeValue;
+
 typedef struct _GstVimbaSrc GstVimbaSrc;
 typedef struct _GstVimbaSrcClass GstVimbaSrcClass;
 
@@ -168,6 +175,9 @@ struct _GstVimbaSrc
         double gain;
         int offsetx;
         int offsety;
+        int binningmode;
+        int binningh;
+        int binningv;
         int width;
         int height;
         int triggerselector;

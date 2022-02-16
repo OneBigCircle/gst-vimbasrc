@@ -79,6 +79,9 @@ enum
     PROP_GAIN,
     PROP_OFFSETX,
     PROP_OFFSETY,
+    PROP_BINNING_MODE,
+    PROP_BINNING_H,
+    PROP_BINNING_V,
     PROP_WIDTH,
     PROP_HEIGHT,
     PROP_TRIGGERSELECTOR,
@@ -280,6 +283,24 @@ static GType gst_vimbasrc_incompleteframehandling_get_type(void)
     return vimbasrc_incompleteframehandling_type;
 }
 
+/* Binning modes */
+#define GST_ENUM_BINNING_MODES (gst_vimbasrc_binning_get_type())
+static GType gst_vimbasrc_binning_get_type(void)
+{
+    static GType vimbasrc_binning_type = 0;
+    static const GEnumValue binning_modes[] = {
+            /* The "nick" (last entry) will be used to pass the setting value on to the Vimba FeatureEnum */
+            {GST_VIMBASRC_BINNINGMODE_SUM, "Binning is accomplished by summing the charge or gray value of adjacent pixels on sensor", "Sum"},
+            {GST_VIMBASRC_BINNINGMODE_AVERAGE, "Binning is accomplished by averaging the charge or gray value of adjacent pixels on sensor", "Average"},
+            {0, NULL, NULL}};
+    if (!vimbasrc_binning_type)
+    {
+        vimbasrc_binning_type =
+                g_enum_register_static("GstVimbasrcBinningModes", binning_modes);
+    }
+    return vimbasrc_binning_type;
+}
+
 /* class initialization */
 
 G_DEFINE_TYPE_WITH_CODE(GstVimbaSrc,
@@ -421,6 +442,38 @@ static void gst_vimbasrc_class_init(GstVimbaSrcClass *klass)
             G_MAXINT,
             G_MAXINT,
             G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(
+            gobject_class,
+            PROP_BINNING_MODE,
+            g_param_spec_enum(
+                    "binningmode",
+                    "BinningMode feature setting",
+                    "Determines whether the result of binned pixels is averaged or summed up. Changes both BinningHorizontalMode and BinningVerticalMode.",
+                    GST_ENUM_BINNING_MODES,
+                    GST_VIMBASRC_BINNINGMODE_SUM,
+                    G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(
+            gobject_class,
+            PROP_BINNING_H,
+            g_param_spec_int(
+                    "binningh",
+                    "BinningHorizontal feature setting",
+                    "The horizontal binning factor.",
+                    0,
+                    G_MAXINT,
+                    1,
+                    G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(
+            gobject_class,
+            PROP_BINNING_V,
+            g_param_spec_int(
+                    "binningv",
+                    "BinningVertical feature setting",
+                    "The vertical binning factor.",
+                    0,
+                    G_MAXINT,
+                    1,
+                    G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
     g_object_class_install_property(
         gobject_class,
         PROP_WIDTH,
@@ -566,6 +619,16 @@ static void gst_vimbasrc_init(GstVimbaSrc *vimbasrc)
             g_object_class_find_property(
                 gobject_class,
                 "exposureauto")));
+    vimbasrc->properties.exposureautomax = g_value_get_int(
+            g_param_spec_get_default_value(
+                    g_object_class_find_property(
+                            gobject_class,
+                            "exposureautomax")));
+    vimbasrc->properties.exposureautomin = g_value_get_int(
+            g_param_spec_get_default_value(
+                    g_object_class_find_property(
+                            gobject_class,
+                            "exposureautomin")));
     vimbasrc->properties.balancewhiteauto = g_value_get_enum(
         g_param_spec_get_default_value(
             g_object_class_find_property(
@@ -596,6 +659,21 @@ static void gst_vimbasrc_init(GstVimbaSrc *vimbasrc)
             g_object_class_find_property(
                 gobject_class,
                 "height")));
+    vimbasrc->properties.binningmode = g_value_get_enum(
+            g_param_spec_get_default_value(
+                    g_object_class_find_property(
+                            gobject_class,
+                            "binningmode")));
+    vimbasrc->properties.binningh = g_value_get_int(
+            g_param_spec_get_default_value(
+                    g_object_class_find_property(
+                            gobject_class,
+                            "binningh")));
+    vimbasrc->properties.binningv = g_value_get_int(
+            g_param_spec_get_default_value(
+                    g_object_class_find_property(
+                            gobject_class,
+                            "binningv")));
     vimbasrc->properties.triggerselector = g_value_get_enum(
         g_param_spec_get_default_value(
             g_object_class_find_property(
@@ -690,6 +768,15 @@ void gst_vimbasrc_set_property(GObject *object, guint property_id, const GValue 
     case PROP_HEIGHT:
         vimbasrc->properties.height = g_value_get_int(value);
         break;
+    case PROP_BINNING_MODE:
+        vimbasrc->properties.binningmode = g_value_get_enum(value);
+        break;
+    case PROP_BINNING_H:
+        vimbasrc->properties.binningh = g_value_get_int(value);
+        break;
+    case PROP_BINNING_V:
+        vimbasrc->properties.binningv = g_value_get_int(value);
+        break;
     case PROP_TRIGGERSELECTOR:
         vimbasrc->properties.triggerselector = g_value_get_enum(value);
         if (vimbasrc->camera.is_acquiring) {
@@ -783,6 +870,18 @@ void gst_vimbasrc_get_property(GObject *object, guint property_id, GValue *value
     case PROP_OFFSETY:
         result = feature_get_int(vimbasrc, "OffsetY", &vimbasrc->properties.offsety);
         g_value_set_int(value, vimbasrc->properties.offsety);
+        break;
+    case PROP_BINNING_MODE:
+        result = feature_get_enum(vimbasrc, "BinningHorizontalMode", GST_ENUM_BINNING_MODES, &vimbasrc->properties.binningmode);
+        g_value_set_enum(value, vimbasrc->properties.binningmode);
+        break;
+    case PROP_BINNING_H:
+        result = feature_get_int(vimbasrc, "BinningHorizontal", &vimbasrc->properties.binningh);
+        g_value_set_int(value, vimbasrc->properties.binningh);
+        break;
+    case PROP_BINNING_V:
+        result = feature_get_int(vimbasrc, "BinningVertical", &vimbasrc->properties.binningv);
+        g_value_set_int(value, vimbasrc->properties.binningv);
         break;
     case PROP_WIDTH:
         result = feature_get_int(vimbasrc, "Width", &vimbasrc->properties.width);
@@ -894,7 +993,6 @@ static GstCaps *gst_vimbasrc_get_caps(GstBaseSrc *src, GstCaps *filter)
         g_value_init(&height, G_TYPE_INT);
 
         g_value_set_int(&width, (gint)vmb_width);
-
         g_value_set_int(&height, (gint)vmb_height);
 
         GstStructure *raw_caps = gst_caps_get_structure(caps, 0);
@@ -1339,6 +1437,10 @@ VmbError_t set_roi(GstVimbaSrc *vimbasrc)
     result = feature_set_int(vimbasrc, "OffsetX", 0);
     result = feature_set_int(vimbasrc, "OffsetY", 0);
 
+    GST_DEBUG_OBJECT(vimbasrc, "Temporarily resetting \"BinningHorizontal\" and \"BinningVertical\" to 1");
+    result = feature_set_int(vimbasrc, "BinningHorizontal", 1);
+    result = feature_set_int(vimbasrc, "BinningVertical", 1);
+
     VmbInt64_t vmb_width;
     result = VmbFeatureIntRangeQuery(vimbasrc->camera.handle, "Width", NULL, &vmb_width);
     // Set Width to full sensor if no explicit width was set
@@ -1379,6 +1481,12 @@ VmbError_t set_roi(GstVimbaSrc *vimbasrc)
         g_object_set(vimbasrc, "offsety", (int)vmb_offsety, NULL);
     }
     result = feature_set_int(vimbasrc, "OffsetY", vimbasrc->properties.offsety);
+
+    // binning
+    feature_set_enum(vimbasrc, "BinningHorizontalMode", GST_ENUM_BINNING_MODES, vimbasrc->properties.binningmode);
+
+    result = feature_set_int(vimbasrc, "BinningHorizontal", vimbasrc->properties.binningh);
+    result = feature_set_int(vimbasrc, "BinningVertical", vimbasrc->properties.binningv);
 
     return result;
 }
