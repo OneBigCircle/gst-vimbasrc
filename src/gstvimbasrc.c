@@ -1437,9 +1437,11 @@ VmbError_t set_roi(GstVimbaSrc *vimbasrc)
     result = feature_set_int(vimbasrc, "OffsetX", 0);
     result = feature_set_int(vimbasrc, "OffsetY", 0);
 
-    GST_DEBUG_OBJECT(vimbasrc, "Temporarily resetting \"BinningHorizontal\" and \"BinningVertical\" to 1");
-    result = feature_set_int(vimbasrc, "BinningHorizontal", 1);
-    result = feature_set_int(vimbasrc, "BinningVertical", 1);
+    // binning
+    feature_set_enum(vimbasrc, "BinningHorizontalMode", GST_ENUM_BINNING_MODES, vimbasrc->properties.binningmode);
+
+    result = feature_set_int(vimbasrc, "BinningHorizontal", vimbasrc->properties.binningh);
+    result = feature_set_int(vimbasrc, "BinningVertical", vimbasrc->properties.binningv);
 
     VmbInt64_t vmb_width;
     result = VmbFeatureIntRangeQuery(vimbasrc->camera.handle, "Width", NULL, &vmb_width);
@@ -1481,12 +1483,6 @@ VmbError_t set_roi(GstVimbaSrc *vimbasrc)
         g_object_set(vimbasrc, "offsety", (int)vmb_offsety, NULL);
     }
     result = feature_set_int(vimbasrc, "OffsetY", vimbasrc->properties.offsety);
-
-    // binning
-    feature_set_enum(vimbasrc, "BinningHorizontalMode", GST_ENUM_BINNING_MODES, vimbasrc->properties.binningmode);
-
-    result = feature_set_int(vimbasrc, "BinningHorizontal", vimbasrc->properties.binningh);
-    result = feature_set_int(vimbasrc, "BinningVertical", vimbasrc->properties.binningv);
 
     return result;
 }
