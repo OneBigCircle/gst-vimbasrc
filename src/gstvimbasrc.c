@@ -647,21 +647,36 @@ void gst_vimbasrc_set_property(GObject *object, guint property_id, const GValue 
         break;
     case PROP_EXPOSURETIME:
         vimbasrc->properties.exposuretime = g_value_get_double(value);
+        if (vimbasrc->camera.is_acquiring) {
+            set_exposure_time(vimbasrc, "ExposureTime");
+        }
         break;
     case PROP_EXPOSUREAUTO:
         vimbasrc->properties.exposureauto = g_value_get_enum(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_enum(vimbasrc, "ExposureAuto", GST_ENUM_EXPOSUREAUTO_MODES, vimbasrc->properties.exposureauto);
+        }
         break;
     case PROP_EXPOSUREAUTOMAX:
         vimbasrc->properties.exposureautomax = g_value_get_int(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_int(vimbasrc, "ExposureAutoMax", vimbasrc->properties.exposureautomax);
+        }
         break;
     case PROP_EXPOSUREAUTOMIN:
         vimbasrc->properties.exposureautomin = g_value_get_int(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_int(vimbasrc, "ExposureAutoMin", vimbasrc->properties.exposureautomin);
+        }
         break;
     case PROP_BALANCEWHITEAUTO:
         vimbasrc->properties.balancewhiteauto = g_value_get_enum(value);
         break;
     case PROP_GAIN:
         vimbasrc->properties.gain = g_value_get_double(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_double(vimbasrc, "Gain", vimbasrc->properties.gain);
+        }
         break;
     case PROP_OFFSETX:
         vimbasrc->properties.offsetx = g_value_get_int(value);
@@ -677,15 +692,30 @@ void gst_vimbasrc_set_property(GObject *object, guint property_id, const GValue 
         break;
     case PROP_TRIGGERSELECTOR:
         vimbasrc->properties.triggerselector = g_value_get_enum(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_enum(vimbasrc, "TriggerSelector", GST_ENUM_TRIGGERSELECTOR_VALUES,
+                             vimbasrc->properties.triggerselector);
+        }
         break;
     case PROP_TRIGGERMODE:
         vimbasrc->properties.triggermode = g_value_get_enum(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_enum(vimbasrc, "TriggerMode", GST_ENUM_TRIGGERMODE_VALUES, vimbasrc->properties.triggermode);
+        }
         break;
     case PROP_TRIGGERSOURCE:
         vimbasrc->properties.triggersource = g_value_get_enum(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_enum(vimbasrc, "TriggerSource", GST_ENUM_TRIGGERSOURCE_VALUES,
+                             vimbasrc->properties.triggersource);
+        }
         break;
     case PROP_TRIGGERACTIVATION:
         vimbasrc->properties.triggeractivation = g_value_get_enum(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_enum(vimbasrc, "TriggerActivation", GST_ENUM_TRIGGERACTIVATION_VALUES,
+                             vimbasrc->properties.triggeractivation);
+        }
         break;
     case PROP_INCOMPLETE_FRAME_HANDLING:
         vimbasrc->properties.incomplete_frame_handling = g_value_get_enum(value);
@@ -1225,6 +1255,19 @@ VmbError_t open_camera_connection(GstVimbaSrc *vimbasrc)
     return result;
 }
 
+VmbError_t set_exposure_time(GstVimbaSrc *vimbasrc) {
+    VmbError_t result = feature_set_double(vimbasrc, "ExposureTime", vimbasrc->properties.exposuretime);
+    if (result == VmbErrorNotFound)
+    {
+        GST_WARNING_OBJECT(vimbasrc,
+                           "Failed to set \"ExposureTime\" to %f. Return code was: %s Attempting \"ExposureTimeAbs\"",
+                           vimbasrc->properties.exposuretime,
+                           ErrorCodeToMessage(result));
+        result = feature_set_double(vimbasrc, "ExposureTimeAbs", vimbasrc->properties.exposuretime);
+    }
+    return result;
+}
+
 /**
  * @brief Applies the values defiend in the vimbasrc properties to their corresponding Vimba camera features
  *
@@ -1249,15 +1292,7 @@ VmbError_t apply_feature_settings(GstVimbaSrc *vimbasrc)
     // ("ExposureTimeAbs", setExposureTimeAbs, getExposureTimeAbs)]. On startup, the feature list of the connected
     // camera obtained from VmbFeaturesList() is used to determine which set/get function to use.
 
-    VmbError_t result = feature_set_int(vimbasrc, "ExposureTime", vimbasrc->properties.exposuretime);
-    if (result == VmbErrorNotFound)
-    {
-        GST_WARNING_OBJECT(vimbasrc,
-                           "Failed to set \"ExposureTime\" to %f. Return code was: %s Attempting \"ExposureTimeAbs\"",
-                           vimbasrc->properties.exposuretime,
-                           ErrorCodeToMessage(result));
-        result = feature_set_int(vimbasrc, "ExposureTimeAbs", vimbasrc->properties.exposuretime);
-    }
+    VmbError_t result = set_exposure_time(vimbasrc);
 
     // Exposure Auto
     result = feature_set_enum(vimbasrc, "ExposureAuto", GST_ENUM_EXPOSUREAUTO_MODES, vimbasrc->properties.exposureauto);

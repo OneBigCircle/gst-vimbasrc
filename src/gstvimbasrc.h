@@ -212,4 +212,6 @@ VmbError_t feature_set_int(GstVimbaSrc *vimbasrc, const char *feature, int value
 VmbError_t feature_set_double(GstVimbaSrc *vimbasrc, const char *feature, double value);
 VmbError_t feature_set_enum(GstVimbaSrc *vimbasrc, const char *feature, GType type, int value);
 
+VmbError_t set_exposure_time(GstVimbaSrc *vimbasrc);
+
 #endif
