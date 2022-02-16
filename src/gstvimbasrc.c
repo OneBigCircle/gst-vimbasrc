@@ -648,7 +648,7 @@ void gst_vimbasrc_set_property(GObject *object, guint property_id, const GValue 
     case PROP_EXPOSURETIME:
         vimbasrc->properties.exposuretime = g_value_get_double(value);
         if (vimbasrc->camera.is_acquiring) {
-            set_exposure_time(vimbasrc, "ExposureTime");
+            set_exposure_time(vimbasrc);
         }
         break;
     case PROP_EXPOSUREAUTO:
@@ -1283,7 +1283,6 @@ VmbError_t apply_feature_settings(GstVimbaSrc *vimbasrc)
         GST_DEBUG_OBJECT(vimbasrc, "Camera was acquiring. Stopping to change feature settings");
         stop_image_acquisition(vimbasrc);
     }
-    GEnumValue *enum_entry;
 
     // exposure time
     // TODO: Workaround for cameras with legacy "ExposureTimeAbs" feature should be replaced with a general legacy
@@ -1403,7 +1402,6 @@ VmbError_t apply_trigger_settings(GstVimbaSrc *vimbasrc)
     GST_DEBUG_OBJECT(vimbasrc, "Applying trigger settings");
 
     VmbError_t result = VmbErrorSuccess;
-    GEnumValue *enum_entry;
 
     // TODO: Should  the function start by disabling triggering for all TriggerSelectors to make sure only one is
     // enabled after the function is done?
@@ -1756,7 +1754,7 @@ VmbError_t feature_get_enum(GstVimbaSrc *vimbasrc, const char *feature, GType ty
 
 VmbError_t feature_set_int(GstVimbaSrc *vimbasrc, const char *feature, int value) {
     GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" to %d", feature, value);
-    result = VmbFeatureIntSet(vimbasrc->camera.handle, feature, value);
+    VmbError_t result = VmbFeatureIntSet(vimbasrc->camera.handle, feature, value);
     if (result == VmbErrorSuccess)
     {
         GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" was changed successfully", feature);
@@ -1774,7 +1772,7 @@ VmbError_t feature_set_int(GstVimbaSrc *vimbasrc, const char *feature, int value
 
 VmbError_t feature_set_double(GstVimbaSrc *vimbasrc, const char *feature, double value) {
     GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" to %f", feature, value);
-    result = VmbFeatureFloatSet(vimbasrc->camera.handle, feature, value);
+    VmbError_t result = VmbFeatureFloatSet(vimbasrc->camera.handle, feature, value);
     if (result == VmbErrorSuccess)
     {
         GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" was changed successfully", feature);
@@ -1793,10 +1791,13 @@ VmbError_t feature_set_double(GstVimbaSrc *vimbasrc, const char *feature, double
 VmbError_t feature_set_enum(GstVimbaSrc *vimbasrc, const char *feature, GType type, int value) {
     GEnumValue *enum_entry = g_enum_get_value(g_type_class_ref(type), value);
     GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" to %s", feature, enum_entry->value_nick);
-    result = VmbFeatureEnumSet(vimbasrc->camera.handle, feature, enum_entry->value_nick);
-    if (result == VmbErrorSuccess) {
+    VmbError_t result = VmbFeatureEnumSet(vimbasrc->camera.handle, feature, enum_entry->value_nick);
+    if (result == VmbErrorSuccess)
+    {
         GST_DEBUG_OBJECT(vimbasrc, "Setting \"%s\" was changed successfully", feature);
-    } else {
+    }
+    else
+    {
         GST_WARNING_OBJECT(vimbasrc,
                            "Failed to set \"%s\" to %s. Return code was: %s",
                            feature,
