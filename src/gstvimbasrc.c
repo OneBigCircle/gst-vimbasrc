@@ -75,8 +75,11 @@ enum
     PROP_EXPOSUREAUTO,
     PROP_EXPOSUREAUTOMAX,
     PROP_EXPOSUREAUTOMIN,
+    PROP_EXPOSUREOUTLIERS,
     PROP_BALANCEWHITEAUTO,
     PROP_GAIN,
+    PROP_GAINAUTO,
+    PROP_GAINOUTLIERS,
     PROP_OFFSETX,
     PROP_OFFSETY,
     PROP_BINNING_MODE,
@@ -116,6 +119,25 @@ static GType gst_vimbasrc_exposureauto_get_type(void)
             g_enum_register_static("GstVimbasrcExposureAutoModes", exposureauto_modes);
     }
     return vimbasrc_exposureauto_type;
+}
+
+/* Auto exposure modes */
+#define GST_ENUM_GAINAUTO_MODES (gst_vimbasrc_gainauto_get_type())
+static GType gst_vimbasrc_gainauto_get_type(void)
+{
+    static GType vimbasrc_gainauto_type = 0;
+    static const GEnumValue gainauto_modes[] = {
+            /* The "nick" (last entry) will be used to pass the setting value on to the Vimba FeatureEnum */
+            {GST_VIMBASRC_AUTOFEATURE_OFF, "Gain is user controlled using Gain", "Off"},
+            {GST_VIMBASRC_AUTOFEATURE_ONCE, "Gain is adapted once by the device. Once it has converged, it returns to the Off state", "Once"},
+            {GST_VIMBASRC_AUTOFEATURE_CONTINUOUS, "Gain is constantly adapted by the device to maximize the dynamic range", "Continuous"},
+            {0, NULL, NULL}};
+    if (!vimbasrc_gainauto_type)
+    {
+        vimbasrc_gainauto_type =
+                g_enum_register_static("GstVimbasrcGainAutoModes", gainauto_modes);
+    }
+    return vimbasrc_gainauto_type;
 }
 
 /* Auto white balance modes */
@@ -400,6 +422,17 @@ static void gst_vimbasrc_class_init(GstVimbaSrcClass *klass)
             0,
             G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
     g_object_class_install_property(
+            gobject_class,
+            PROP_EXPOSUREOUTLIERS,
+            g_param_spec_int(
+                    "exposureoutliers",
+                    "ExposureAutoOutliers feature setting",
+                    "Sets the Auto Exposure Outliers when ExposureMode is Timed and ExposureAuto is Once or Continuous.",
+                    0,
+                    1000,
+                    0,
+                    G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(
         gobject_class,
         PROP_BALANCEWHITEAUTO,
         g_param_spec_enum(
@@ -409,6 +442,16 @@ static void gst_vimbasrc_class_init(GstVimbaSrcClass *klass)
             GST_ENUM_BALANCEWHITEAUTO_MODES,
             GST_VIMBASRC_AUTOFEATURE_OFF,
             G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(
+            gobject_class,
+            PROP_GAINAUTO,
+            g_param_spec_enum(
+                    "gainauto",
+                    "GainAuto feature setting",
+                    "Sets the auto gain mode. The output of the auto gain function affects the whole image",
+                    GST_ENUM_GAINAUTO_MODES,
+                    GST_VIMBASRC_AUTOFEATURE_OFF,
+                    G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
     g_object_class_install_property(
         gobject_class,
         PROP_GAIN,
@@ -420,6 +463,17 @@ static void gst_vimbasrc_class_init(GstVimbaSrcClass *klass)
             G_MAXDOUBLE,
             0.,
             G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+    g_object_class_install_property(
+            gobject_class,
+            PROP_GAINOUTLIERS,
+            g_param_spec_int(
+                    "gainoutliers",
+                    "GainAutoOutliers feature setting",
+                    "Sets the Auto Gain Outliers when GainAuto is Once or Continuous.",
+                    0,
+                    1000,
+                    0,
+                    G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
     g_object_class_install_property(
         gobject_class,
         PROP_OFFSETX,
@@ -629,16 +683,31 @@ static void gst_vimbasrc_init(GstVimbaSrc *vimbasrc)
                     g_object_class_find_property(
                             gobject_class,
                             "exposureautomin")));
+    vimbasrc->properties.exposureoutliers = g_value_get_int(
+            g_param_spec_get_default_value(
+                    g_object_class_find_property(
+                            gobject_class,
+                            "exposureoutliers")));
     vimbasrc->properties.balancewhiteauto = g_value_get_enum(
         g_param_spec_get_default_value(
             g_object_class_find_property(
                 gobject_class,
                 "balancewhiteauto")));
+    vimbasrc->properties.gainauto = g_value_get_enum(
+            g_param_spec_get_default_value(
+                    g_object_class_find_property(
+                            gobject_class,
+                            "gainauto")));
     vimbasrc->properties.gain = g_value_get_double(
         g_param_spec_get_default_value(
             g_object_class_find_property(
                 gobject_class,
                 "gain")));
+    vimbasrc->properties.gainoutliers = g_value_get_int(
+            g_param_spec_get_default_value(
+                    g_object_class_find_property(
+                            gobject_class,
+                            "gainoutliers")));
     vimbasrc->properties.offsetx = g_value_get_int(
         g_param_spec_get_default_value(
             g_object_class_find_property(
@@ -747,13 +816,31 @@ void gst_vimbasrc_set_property(GObject *object, guint property_id, const GValue 
             feature_set_int(vimbasrc, "ExposureAutoMin", vimbasrc->properties.exposureautomin);
         }
         break;
+    case PROP_EXPOSUREOUTLIERS:
+        vimbasrc->properties.exposureoutliers = g_value_get_int(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_int(vimbasrc, "ExposureAutoOutliers", vimbasrc->properties.exposureoutliers);
+        }
+        break;
     case PROP_BALANCEWHITEAUTO:
         vimbasrc->properties.balancewhiteauto = g_value_get_enum(value);
+        break;
+    case PROP_GAINAUTO:
+        vimbasrc->properties.gainauto = g_value_get_enum(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_enum(vimbasrc, "GainAuto", GST_ENUM_GAINAUTO_MODES, vimbasrc->properties.gainauto);
+        }
         break;
     case PROP_GAIN:
         vimbasrc->properties.gain = g_value_get_double(value);
         if (vimbasrc->camera.is_acquiring) {
             feature_set_double(vimbasrc, "Gain", vimbasrc->properties.gain);
+        }
+        break;
+    case PROP_GAINOUTLIERS:
+        vimbasrc->properties.gainoutliers = g_value_get_int(value);
+        if (vimbasrc->camera.is_acquiring) {
+            feature_set_int(vimbasrc, "GainAutoOutliers", vimbasrc->properties.gainoutliers);
         }
         break;
     case PROP_OFFSETX:
@@ -855,13 +942,25 @@ void gst_vimbasrc_get_property(GObject *object, guint property_id, GValue *value
         result = feature_get_int(vimbasrc, "ExposureAutoMin", &vimbasrc->properties.exposureautomin);
         g_value_set_int(value, vimbasrc->properties.exposureautomin);
         break;
+    case PROP_EXPOSUREOUTLIERS:
+        result = feature_get_int(vimbasrc, "ExposureAutoOutliers", &vimbasrc->properties.exposureoutliers);
+        g_value_set_int(value, vimbasrc->properties.exposureoutliers);
+        break;
     case PROP_BALANCEWHITEAUTO:
         result = feature_get_enum(vimbasrc, "BalanceWhiteAuto", GST_ENUM_BALANCEWHITEAUTO_MODES, &vimbasrc->properties.balancewhiteauto);
         g_value_set_enum(value, vimbasrc->properties.balancewhiteauto);
         break;
+    case PROP_GAINAUTO:
+        result = feature_get_enum(vimbasrc, "GainAuto", GST_ENUM_GAINAUTO_MODES, &vimbasrc->properties.gainauto);
+        g_value_set_enum(value, vimbasrc->properties.gainauto);
+        break;
     case PROP_GAIN:
         result = feature_get_double(vimbasrc, "Gain", &vimbasrc->properties.gain);
         g_value_set_double(value, vimbasrc->properties.gain);
+        break;
+    case PROP_GAINOUTLIERS:
+        result = feature_get_int(vimbasrc, "GainAutoOutliers", &vimbasrc->properties.gainoutliers);
+        g_value_set_int(value, vimbasrc->properties.gainoutliers);
         break;
     case PROP_OFFSETX:
         result = feature_get_int(vimbasrc, "OffsetX", &vimbasrc->properties.offsetx);
@@ -1395,12 +1494,19 @@ VmbError_t apply_feature_settings(GstVimbaSrc *vimbasrc)
     result = feature_set_enum(vimbasrc, "ExposureAuto", GST_ENUM_EXPOSUREAUTO_MODES, vimbasrc->properties.exposureauto);
     result = feature_set_int(vimbasrc, "ExposureAutoMax", vimbasrc->properties.exposureautomax);
     result = feature_set_int(vimbasrc, "ExposureAutoMin", vimbasrc->properties.exposureautomin);
+    result = feature_set_int(vimbasrc, "ExposureAutoOutliers", vimbasrc->properties.exposureoutliers);
 
     // Auto whitebalance
     result = feature_set_enum(vimbasrc, "BalanceWhiteAuto", GST_ENUM_BALANCEWHITEAUTO_MODES, vimbasrc->properties.balancewhiteauto);
 
     // gain
-    result = feature_set_double(vimbasrc, "Gain", vimbasrc->properties.gain);
+    result = feature_set_enum(vimbasrc, "GainAuto", GST_ENUM_GAINAUTO_MODES, vimbasrc->properties.gainauto);
+    result = feature_set_int(vimbasrc, "GainAutoOutliers", vimbasrc->properties.gainoutliers);
+    if (!vimbasrc->properties.gainauto) {
+        result = feature_set_double(vimbasrc, "Gain", vimbasrc->properties.gain);
+    }
+
+    result = feature_set_enum(vimbasrc, "BalanceWhiteAuto", GST_ENUM_BALANCEWHITEAUTO_MODES, vimbasrc->properties.balancewhiteauto);
 
     result = set_roi(vimbasrc);
 

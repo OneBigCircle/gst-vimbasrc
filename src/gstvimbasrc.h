@@ -171,8 +171,11 @@ struct _GstVimbaSrc
         int exposureauto;
         int exposureautomax;
         int exposureautomin;
+        int exposureoutliers;
         int balancewhiteauto;
+        int gainauto;
         double gain;
+        int gainoutliers;
         int offsetx;
         int offsety;
         int binningmode;
